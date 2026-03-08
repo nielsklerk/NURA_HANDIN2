@@ -75,23 +75,8 @@ def root_finder(
     rerr : float
         Relative error
     """
-    # False Position
-    a, b = bracket  
-    previous_c = np.inf
-    for _ in range(max_iters):
-        c = b - ((b-a)*func(b))/(func(b)-func(a))
-        if func(a)*func(c) < 0:
-            b = np.copy(c)
-        else:
-            a = np.copy(c)
-        aerr = np.abs(c - previous_c)
-        if aerr < atol:
-            return c, aerr, rerr
-        rerr = np.abs(aerr /c)
-        if rerr < rtol:
-            return c, aerr, rerr
-        previous_c = np.copy(c)
-    return c, aerr, rerr
+    # TODO: Implement root finder (e.g. bisection, false-position, Newton-Raphson)
+    return 0.0, 0.0, 0.0
 
 
 def main():
@@ -99,7 +84,7 @@ def main():
     # Initial bracket
     bracket = (1, 1e7)
 
-    root, aerr, rerr = root_finder(lambda x: equilibrium1(x, Z, Tc, psi), bracket)  # replace with your root finder
+    root, aerr, rerr = 0.0, 0.0, 0.0  # replace with your root finder
 
     with open("Calculations/equilibrium_temp_simple.txt", "w") as f:
         f.write(f"{root:.12g} & {aerr:.3e} & {rerr:.3e}")
@@ -110,7 +95,7 @@ def main():
 
     for nH in [1e-4, 1, 1e4]:
 
-        root, aerr, rerr = root_finder(lambda x: equilibrium2(x, Z, Tc, psi, nH, A, xi, aB), bracket)  # replace with your root finder
+        root, aerr, rerr = 0.0, 0.0, 0.0  # replace with your root finder
         if nH == 1e-4:
             with open("Calculations/equilibrium_low_density.txt", "w") as f:
                 f.write(f"{root:.12g}")

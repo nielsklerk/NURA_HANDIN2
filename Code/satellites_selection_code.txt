@@ -30,10 +30,7 @@ def n(
         Same type and shape as x. Number density of satellite galaxies
         at given radius x.
     """
-    x = np.asarray(x)
-    n = np.zeros_like(x)
-    n[x>0] = A * Nsat * (x[x>0] / b) ** (a-3) * np.exp(-(x[x>0] / b) ** c) # REPLACE BOOL MASK WITH OWN CODE
-    return n
+    return A * Nsat * (x / b) ** (a-3) * np.exp(-(x / b) ** c)  # insert your function
 
 
 ##### Integrator block #####
@@ -70,29 +67,11 @@ def romberg_integrator(
         (value, err), with err a first estimate of the (relative)
         error.
     """
-    a, b = bounds
-    h = b - a
-    r = np.zeros(order)
-    r[0] = 0.5 * h * (func(b, *args) - func(a, *args))
-    N_p = 1
-    for i in range(1, order):
-        r[i] = 0
-        delta = np.copy(h)
-        h *= 0.5
-        x = a + h
-        for _ in range(N_p):
-            r[i] += func(x, *args)
-            x += delta
-        r[i] = 0.5 * (r[i-1] + delta * r[i])
-        N_p *= 2
+    # TODO: implement Romberg integration method
 
-    N_p = 1
-    for i in range(1, order):
-        N_p *= 4
-        r[:order - i] = (N_p * r[1:order - i + 1] - r[:order - i]) / (N_p - 1)
     if err:
-        return r[0], np.abs(r[0]-r[1])  # (value, error)
-    return r[0]
+        return 0.0, 0.0  # (value, error)
+    return 0.0
 
 
 #### Sampler block ####
@@ -126,7 +105,7 @@ def sampler(
         Values sampled from dist, shape (Nsamples,)
     """
 
-    return np.random.uniform(min, max, Nsamples) # REPLACE WITH OWN FUNCTION
+    return np.zeros(Nsamples)
 
 
 #### Sorting block ####
@@ -158,24 +137,7 @@ def sort_array(
     else:
         sorted_arr = arr.copy()
 
-    N = len(sorted_arr)
-    step = 1
-
-    while step < N:
-        for i in range(0, N, step*2):
-            l = i
-            r = min(i + step, N)
-            end = min(i + 2*step, N)
-
-            while l < r and r < end:
-                if sorted_arr[l] <= sorted_arr[r]:
-                    l += 1
-                else:
-                    sorted_arr[l:r+1] = np.roll(sorted_arr[l:r+1], 1) # REPLACE ROLL WITH OWN FUNCTION
-                    l += 1
-                    r += 1
-
-        step *= 2
+    # TODO: sort sorted_arr in-place here
 
     return sorted_arr
 
@@ -231,8 +193,8 @@ def dn_dx(
         Same type and shape as x. Derivative of number density of
         satellite galaxies at given radius x.
     """
-    fraction = x/b
-    return  - A * Nsat * fraction**(a-4) * (c * fraction ** c - a + 3) * np.exp(-fraction**c) / b
+    # TODO: Write the analytical derivative of n(x) here
+    return 0.0
 
 
 def finite_difference(
@@ -255,7 +217,8 @@ def finite_difference(
     dy : float | ndarray
         Derivative at x
     """
-    return 0.5 * (function(x + h) - function(x - h)) / h
+    # TODO: Implement finite difference method
+    return 0.0
 
 
 def compute_derivative(
@@ -263,9 +226,9 @@ def compute_derivative(
     x: float | np.ndarray,
     h_init: float,
     # For Ridders use parameters below:
-    d: float, # Factor by which to decrease h_init every iteration
-    eps: float, # Relative error
-    max_iters: int = 10, # Maximum number of iterations before exiting
+    # d: float, # Factor by which to decrease h_init every iteration
+    # eps: float, # Relative error
+    # max_iters: int = 10, 3 Maximum number of iterations before exiting
 ) -> float | np.ndarray:
     """
     Function to compute derivative
@@ -284,23 +247,8 @@ def compute_derivative(
     df : float | ndarray
         Derivative at x
     """
-    r = np.zeros(max_iters)
-    r[0] = finite_difference(function, x, h_init)
-    for i in range(1, max_iters):
-        h_init /= d
-        r[i] = finite_difference(function, x, h_init)
-    N_p = 1
-    error = np.inf
-    for i in range(1, max_iters):
-        N_p *= d**2
-        r[:max_iters - i] = (N_p * r[1:max_iters - i + 1] - r[:max_iters - i]) / (N_p - 1)
-        new_error =  np.abs(r[0]-r[1])
-        if new_error > error:
-            return r[0]
-        else:
-            error = new_error
-        if np.abs(new_error/r[0]) < eps:
-            return r[0]
+    # TODO: Implement derivative
+    return 0.0
 
 
 def main():
@@ -315,29 +263,31 @@ def main():
     N_generate = 10000
     xx = np.linspace(xmin, xmax, N_generate)
 
-    integrand = lambda x, a, b, c: 4 * np.pi * x**2 * n(x, 1, Nsat, a, b, c)  # insert the correct function
+    integrand = lambda x, a, b, c: 0.0  # insert the correct function
     integral, err = romberg_integrator(
-        integrand, bounds, order=10, args=(a, b, c), err=True
+        integrand, bounds, order=2, args=(a, b, c), err=True
     )
 
     # Normalisation
-    A = Nsat / integral  # to be computed
+    A = 1.0  # to be computed
     with open("Calculations/satellite_A.txt", "w") as f:
         f.write(f"{A:.12g}\n")
-    integrand = lambda x, a, b, c: 4 * np.pi * x**2 * n(x, A, Nsat, a, b, c)  # replace by the correct function
-    integrated_Nsat = romberg_integrator(
-        integrand, bounds, order=10, args=(a, b, c), err=False
+    integrand = lambda x, a, b, c: 0.0  # replace by the correct function
+    integrated_Nsat = (
+        0.0  # replace by the correct integral, e.g. by calling your integrator
     )
 
     p_of_x = (
-        lambda x: n(x) / (Nsat**2)
+        lambda x: 0.0
     )  # replace by the normalised distribution of satellite galaxies as a function of x
 
     # Numerically determine maximum to normalize p(x) for sampling
     pmax = 0.0  # replace by taking the maximum value of p_of_x
 
     p_of_x_norm = lambda x: 0.0  # replace by the normalised distribution
-    random_samples = sampler(p_of_x_norm, min=xmin, max=xmax, Nsamples=N_generate, args=())
+    random_samples = np.zeros(
+        N_generate
+    )  # replace by your sampler(p_of_x_norm, min=xmin, max=xmax, Nsamples=N_generate, args=())
 
     edges = 10 ** np.linspace(np.log10(xmin), np.log10(xmax), 21)
 
@@ -387,7 +337,7 @@ def main():
 
     x_to_eval = 1
     func_to_eval = lambda x: n(x, A, Nsat, a, b, c)
-    dn_dx_numeric = compute_derivative(func_to_eval, x_to_eval, h_init=0.5, d=1.2, eps=1e-12, max_iters=12)
+    dn_dx_numeric = 0.0  # replace by your derivative, e.g. compute_derivative(func_to_eval, x_to_eval, h_init=0.1)
     dn_dx_analytic = dn_dx(x_to_eval, A, Nsat, a, b, c)
     with open("Calculations/satellite_deriv_analytic.txt", "w") as f:
         f.write(f"{dn_dx_analytic:.12g}\n")
