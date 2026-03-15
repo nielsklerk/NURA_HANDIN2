@@ -97,6 +97,27 @@ def romberg_integrator(
 
 #### Sampler block ####
 
+def rng(N):
+    global seed
+    seed = np.uint(seed)
+    a = 4294957665
+    a_1 = 21
+    a_2 = 35
+    a_3 = 4
+    rnds = np.zeros(N)
+    for i in range(N):
+        # MWC 32-bit
+        seed = seed & (2**32 - 1)
+        seed = a*(seed & (2**32 - 1)) + (seed >> 32)
+        seed = seed & (2**32 - 1)
+
+        # 64-bit XOR-shift
+        seed = seed ^ (seed>>a_1)
+        seed = seed ^ (seed<<a_2)
+        seed = seed ^ (seed>>a_3)
+        u = seed / np.float64(2**64)
+        rnds[i] = u
+    return rnds
 
 def sampler(
     dist: callable,
@@ -104,6 +125,7 @@ def sampler(
     max: float,
     Nsamples: int,
     args: tuple = (),
+    N_cdf_samples = 1000
 ) -> np.ndarray:
     """
     Sample a distribution using sampling method of your choice
@@ -125,8 +147,25 @@ def sampler(
     sample: ndarray
         Values sampled from dist, shape (Nsamples,)
     """
+    def inverse_function(y, x_values, y_values):
+        for right_index, y_value in enumerate(y_values):
+            if y_value > y:
+                break
+        left_y_value, right_y_value = y_values[right_index - 1], y_values[right_index]
+        left_x_value, right_x_value = x_values[right_index - 1], x_values[right_index]
+        dx = (y - left_y_value) / (right_y_value - left_y_value)
+        return left_x_value + dx * (right_x_value - left_x_value)
 
-    return np.random.uniform(min, max, Nsamples) # REPLACE WITH OWN FUNCTION
+    cdf = np.zeros(N_cdf_samples)
+    x_values = np.linspace(min, max, N_cdf_samples)
+    for i, right in enumerate(x_values):
+        cdf[i] = romberg_integrator(dist, (min, right), args=args)
+    cdf /= np.max(cdf)
+    random = rng(Nsamples)
+    sample = np.zeros(Nsamples)
+    for i in range(Nsamples):
+        sample[i] = inverse_function(random[i], x_values, cdf)
+    return sample
 
 
 #### Sorting block ####
@@ -135,6 +174,7 @@ def sampler(
 def sort_array(
     arr: np.ndarray,
     inplace: bool = False,
+    index = False
 ) -> np.ndarray:
     """
     Sort a 1D array using a sorting algorithm of your choice
@@ -160,6 +200,7 @@ def sort_array(
 
     N = len(sorted_arr)
     step = 1
+    index_array = np.arange(N)
 
     while step < N:
         for i in range(0, N, step*2):
@@ -172,11 +213,13 @@ def sort_array(
                     l += 1
                 else:
                     sorted_arr[l:r+1] = np.roll(sorted_arr[l:r+1], 1) # REPLACE ROLL WITH OWN FUNCTION
+                    index_array[l:r+1] = np.roll(index_array[l:r+1], 1)
                     l += 1
                     r += 1
 
         step *= 2
-
+    if index:
+        return index_array
     return sorted_arr
 
 
@@ -197,8 +240,10 @@ def choice(arr: np.ndarray, size: int = 1) -> np.ndarray:
     chosen : ndarray
         Randomly chosen elements from arr, shape (size,)
     """
-    # TODO: Implement your choice function here, e.g. by using Fisher-Yates shuffling
-    return arr[:size].copy()
+    N = len(arr)
+    random = rng(N)
+    random_index = sort_array(random, index=True)
+    return arr[random_index][:size].copy()
 
 
 ##### Derivative block #####
@@ -330,29 +375,30 @@ def main():
     )
 
     p_of_x = (
-        lambda x: n(x) / (Nsat**2)
+        lambda x: n(x, A, Nsat, a, b, c) / (Nsat**2)
     )  # replace by the normalised distribution of satellite galaxies as a function of x
 
     # Numerically determine maximum to normalize p(x) for sampling
     pmax = 0.0  # replace by taking the maximum value of p_of_x
 
     p_of_x_norm = lambda x: 0.0  # replace by the normalised distribution
-    random_samples = sampler(p_of_x_norm, min=xmin, max=xmax, Nsamples=N_generate, args=())
+    global seed
+    seed = 123456789
+    random_samples = sampler(p_of_x, min=xmin, max=xmax, Nsamples=N_generate, args=())
 
     edges = 10 ** np.linspace(np.log10(xmin), np.log10(xmax), 21)
 
     hist = np.histogram(
-        xmin + np.sort(np.random.rand(N_generate)) * (xmax - xmin), bins=edges
+        random_samples, bins=edges
     )[
         0
     ]  # replace!
-    hist_scaled = (
-        1e-3 * hist
+    hist_scaled = (hist * 2 / (edges[1:]+edges[:-1])
     )  # replace; this is NOT what you should be plotting, this is just a random example to get a plot with reasonable y values (think about how you *should* scale hist)
 
     fig = plt.figure()
-    relative_radius = edges.copy()  # replace!
-    analytical_function = edges.copy()  # replace
+    relative_radius = np.linspace(xmin,xmax, 1000)  # replace!
+    analytical_function = n(relative_radius, A, Nsat, a, b, c)  # replace
 
     fig1b, ax = plt.subplots()
     ax.stairs(
@@ -363,7 +409,7 @@ def main():
     )  # correct this according to the exercise!
     ax.set(
         xlim=(xmin, xmax),
-        ylim=(10 ** (-3), 10),  # you may or may not need to change ylim
+        # ylim=(10 ** (-3), 10),  # you may or may not need to change ylim
         yscale="log",
         xscale="log",
         xlabel="Relative radius",
@@ -373,7 +419,7 @@ def main():
     plt.savefig("Plots/my_solution_1b.png", dpi=600)
 
     # Cumulative plot of the chosen galaxies (1c)
-    chosen = xmin + np.sort(np.random.rand(Nsat)) * (xmax - xmin)  # replace!
+    chosen = sort_array(choice(random_samples, 100), inplace=True)  # replace!
     fig1c, ax = plt.subplots()
     ax.plot(chosen, np.arange(100))
     ax.set(
