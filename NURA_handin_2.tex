@@ -39,8 +39,8 @@
 \newcommand{\PlotDir}{Plots}
 \newcommand{\CalcDir}{Calculations}
 
-\title{NURa Hand-in 1}
-\author{Name (Student number)}
+\title{NURa Hand-in 2}
+\author{Niels de Klerk (s3640477)}
 \date{Date}
 
 \begin{document}
@@ -57,8 +57,31 @@
 
 \subsection{(1a) Determining the normalization}
 
-Explain the integration method used (e.g. Romberg integration or another Richardson method).  
-Describe how you implemented the spherical volume element \(dV\).
+\textbf{Explain the integration method used (e.g. Romberg integration or another Richardson method).  
+Describe how you implemented the spherical volume element \(dV\).}
+The satellite galaxies around a central follow the number density
+\begin{equation}
+    n(x) = A\langle N_{sat}\rangle\left(\frac{x}{b}\right)^{a-3}\exp\left[-\left(\frac{x}{b}\right)^c\right]
+\end{equation}
+
+where $x$ is the relative radius to the virial radius $(x\equiv r/r_\mathrm{vir})$. This distribution has to normalize to $\langle N_{sat}\rangle$ when integrating from $x_\mathrm{min}=0$ to $x_\mathrm{max}=5$. 
+
+\begin{equation}
+    \int dV n(x) = \langle N_{sat}\rangle
+\end{equation}
+
+Rewriting $dV$ in spherical coordinates, we find that $dV = 4\pi x^2$. Therefore, the integral that determines the value for $A$ is
+
+\begin{equation}
+    \int_{x=0}^{x=5} dx\; 4\pi x^2n(x) = \langle N_{sat}\rangle
+\end{equation}
+
+Filling in the equation for $n(x)$ and isolating $A$ results in
+\begin{equation}
+    A = \frac{\langle N_{sat}\rangle}{\int_{x=0}^{x=5} dx\; 4\pi x^2 \langle N_{sat}\rangle\left(\frac{x}{b}\right)^{a-3}\exp\left[-\left(\frac{x}{b}\right)^c\right]}
+\end{equation}
+
+To evaluate this integral, we will use Romberg integration. This numerical integration technique 
 
 \begin{table}[H]
 \centering
