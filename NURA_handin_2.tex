@@ -77,32 +77,50 @@ Rewriting $dV$ in spherical coordinates, we find that $dV = 4\pi x^2$. Therefore
 \end{equation}
 
 Filling in the equation for $n(x)$ and isolating $A$ results in
-\begin{equation}
+\begin{equation}\label{eq:normalization constant}
     A = \frac{\langle N_{sat}\rangle}{\int_{x=0}^{x=5} dx\; 4\pi x^2 \langle N_{sat}\rangle\left(\frac{x}{b}\right)^{a-3}\exp\left[-\left(\frac{x}{b}\right)^c\right]}
 \end{equation}
 
-To evaluate this integral, we will use Romberg integration. This numerical integration technique 
+To evaluate this integral, we will use Romberg integration. This numerical integration technique combines different estimates of the integral $\int f(x)dx$ into a better approximation. It starts by finding the area between the two endpoints of the integral $r_0$. For the next estimate, it uses the previous estimate and the sum of function evaluations between the endpoints, scaled by the step size $r_{i+1}=\frac{1}{2}[r_i+\Delta_{i+1}\sum_j f (x_j)]$. 
 
+After repeating this step $m-1$ times, there are $m$ estimates for the value of the integral. By using the equation 
+\begin{equation}
+    r_{i,j+1}=\frac{4^{j+1}{r_{i+1, j}-S_{i,j}}}{4^{j+1}-1}
+\end{equation}
+where the initial values are $r_{i,0}$. This step repeats until there is a single value remaining that uses a combination of all the starting estimates. 
+
+Applying the Romberg integration to \autoref{eq:normalization constant}, we find the following value for the normalization constant.
 \begin{table}[H]
 \centering
 \caption{Normalization constant of the satellite galaxy profile.}
-\begin{tabular}{|c|}
+\begin{tabular}{|c|c|c|}
 \hline
-Normalization constant \(A\) \\
+Normalization constant \(A\) & Absolute error & Absolute error $N_\mathrm{sat}$ \\
 \hline
 \input{\CalcDir/satellite_A.txt} \\
+\\
 \hline
 \end{tabular}
 \end{table}
 
 \subsection{Code for the integrator}
 
-\lstinputlisting[language=Python]{\CodeDir/satellites_integrator_code.txt}
+\lstinputlisting[language=Python, firstline=0, lastline=95]{\CodeDir/satellites_integrator_code.txt}
 
 \subsection{(1b) Sampling the satellite distribution}
 
-Describe the sampling method used (e.g. rejection sampling).  
-Explain how the random number generator was implemented and how its randomness was tested.
+\textbf{Describe the sampling method used (e.g. rejection sampling).  
+Explain how the random number generator was implemented and how its randomness was tested.}
+We would like to sample random galaxies from the number density. To find the probability density, we need to find the number of galaxies between $x$ and $x+dx$. 
+\begin{equation}
+    \int dx\;N(x) = \int dx\;4\pi x^2n(x)
+\end{equation}
+So we get $N(x)dx=4\pi x^2n(x)dx$. The probability density needs to be normalized so we get
+\begin{equation}
+    p(x)dx = \frac{N(x)dx}{N_\mathrm{sat}} = \frac{4\pi x^2n(x)dx}{N_\mathrm{sat}}
+\end{equation}
+To sample from this distribution, we will use rejection sampling. This is most efficient when the \textbf{MORE EXPLANATION}.
+First, a random x value $x_\mathrm{rand}$ is sampled from a uniform distribution from 0 to 5. Next, a random y value $y_\mathrm{rand}$ is sampled from a uniform distribution from 0 to 1. If $p(x_\mathrm{rand}) > y_\mathrm{rand}$, the $x_\mathrm{rand}$ is accepted into the sample. Otherwise, a new x and y value are sampled until the required number of samples is reached.
 
 \begin{figure}[H]
 \centering
@@ -110,16 +128,16 @@ Explain how the random number generator was implemented and how its randomness w
 \caption{Comparison between the analytical satellite distribution \(N(x)\) and the histogram of 10 000 sampled satellite galaxies in logarithmic bins.}
 \end{figure}
 
-Does your sampled distribution agree with the analytical prediction?
+\textbf{Does your sampled distribution agree with the analytical prediction?}
 
 \subsection{Code for sampling}
 
-\lstinputlisting[language=Python]{\CodeDir/satellites_sampling_code.txt}
+\lstinputlisting[language=Python, firstline=98, lastline=168]{\CodeDir/satellites_sampling_code.txt}
  
 \subsection{(1c) Selecting and sorting satellites}
 
-Describe the selection of 100 galaxies (equal probability, no duplicates, no rejection).
-Explain the sorting algorithm you used.
+\textbf{Describe the selection of 100 galaxies (equal probability, no duplicates, no rejection).
+Explain the sorting algorithm you used.}
 
 \begin{figure}[H]
 \centering
@@ -129,7 +147,7 @@ Explain the sorting algorithm you used.
 
 \subsection{Code for selection and sorting}
 
-\lstinputlisting[language=Python]{\CodeDir/satellites_selection_code.txt}
+\lstinputlisting[language=Python, firstline=171, lastline=246]{\CodeDir/satellites_selection_code.txt}
 
 \subsection{(1d) Numerical derivative}
 
@@ -146,18 +164,18 @@ Numerical & \input{\CalcDir/satellite_deriv_numeric.txt} \\
 \end{tabular}
 \end{table}
 
-Do your analytical and numerical derivatives agree? Why?
+\textbf{Do your analytical and numerical derivatives agree? Why?}
 
 \subsection{Code for derivative calculation}
 
-\lstinputlisting[language=Python]{\CodeDir/satellites_derivative_code.txt}
+\lstinputlisting[language=Python, firstline=249, lastline=348]{\CodeDir/satellites_derivative_code.txt}
 
 \section{Heating and cooling in HII regions}
 
 
 \subsection{(2a) Photoionization heating and radiative recombination cooling}
 
-Describe the implementation of your root-finding method (e.g. bisection, Newton-Raphson).
+\textbf{Describe the implementation of your root-finding method (e.g. bisection, Newton-Raphson).}
 
 \begin{table}[H]
 \centering
@@ -172,7 +190,7 @@ Temperature [K] & Absolute error & Relative error \\
 \end{tabular}
 \end{table}
 
-How many iterations it took? Discuss the convergence of your root finder.
+\textbf{How many iterations it took? Discuss the convergence of your root finder.}
 
 \subsection{(2b) More realistic model}
 
@@ -191,7 +209,7 @@ $10^4$ & \input{\CalcDir/equilibrium_high_density.txt} \\
 \end{tabular}
 \end{table}
 
-Discuss the results.  What is the difference for the low, intermediate and high gas density?
+\textbf{Discuss the results.  What is the difference for the low, intermediate and high gas density?}
 
 
 \subsection{Code for Exercise 2}
