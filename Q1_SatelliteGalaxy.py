@@ -375,13 +375,9 @@ def main():
     )
 
     p_of_x = (
-        lambda x: n(x, A, Nsat, a, b, c) / (Nsat**2)
+        lambda x: 4*np.pi*x**2*n(x, A, Nsat, a, b, c) / (Nsat**2)
     )  # replace by the normalised distribution of satellite galaxies as a function of x
 
-    # Numerically determine maximum to normalize p(x) for sampling
-    pmax = 0.0  # replace by taking the maximum value of p_of_x
-
-    p_of_x_norm = lambda x: 0.0  # replace by the normalised distribution
     global seed
     seed = 123456789
     random_samples = sampler(p_of_x, min=xmin, max=xmax, Nsamples=N_generate, args=())
@@ -398,7 +394,7 @@ def main():
 
     fig = plt.figure()
     relative_radius = np.linspace(xmin,xmax, 1000)  # replace!
-    analytical_function = n(relative_radius, A, Nsat, a, b, c)  # replace
+    analytical_function = 4*np.pi*relative_radius**2*n(relative_radius, A, Nsat, a, b, c)  # replace
 
     fig1b, ax = plt.subplots()
     ax.stairs(
@@ -419,7 +415,7 @@ def main():
     plt.savefig("Plots/my_solution_1b.png", dpi=600)
 
     # Cumulative plot of the chosen galaxies (1c)
-    chosen = sort_array(choice(random_samples, 100), inplace=True)  # replace!
+    chosen = sort_array(choice(random_samples, 100), inplace=True)
     fig1c, ax = plt.subplots()
     ax.plot(chosen, np.arange(100))
     ax.set(
