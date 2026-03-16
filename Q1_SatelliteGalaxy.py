@@ -117,15 +117,69 @@ def rng(N):
         seed = seed ^ (seed>>a_3)
         u = seed / np.float64(2**64)
         rnds[i] = u
+    if N==1:
+        return rnds[0]
     return rnds
+
+def root_finder(
+    func: callable,  # add derivative if using Newton-Raphson
+    bracket: tuple,
+    atol: float = 1e-6,
+    rtol: float = 1e-6,
+    max_iters: int = 100,
+) -> tuple[float, float, float]:
+    """
+    Find a root of a function
+
+    Parameters
+    ----------
+    func : callable
+        Function to find root of
+    bracket : tuple
+        Bracket for which to find first secant
+    atol : float, optional
+        Absolute tolerance.
+        The default is 1e-6
+    rtol : float, optional
+        Relative tolerance.
+        The default is 1e-6
+    max_iters: int, optional
+        Maximum number of iterations.
+        The default is 100
+
+    Returns
+    -------
+    root : float
+        Approximate root
+    aerr : float
+        Absolute error
+    rerr : float
+        Relative error
+    """
+    # False Position
+    a, b = bracket  
+    previous_c = np.inf
+    for _ in range(max_iters):
+        c = b - ((b-a)*func(b))/(func(b)-func(a))
+        if func(a)*func(c) < 0:
+            b = np.copy(c)
+        else:
+            a = np.copy(c)
+        aerr = np.abs(c - previous_c)
+        if aerr < atol:
+            return c, aerr, rerr
+        rerr = np.abs(aerr /c)
+        if rerr < rtol:
+            return c, aerr, rerr
+        previous_c = np.copy(c)
+    return c, aerr, rerr
 
 def sampler(
     dist: callable,
     min: float,
     max: float,
     Nsamples: int,
-    args: tuple = (),
-    N_cdf_samples = 1000
+    args: tuple = ()
 ) -> np.ndarray:
     """
     Sample a distribution using sampling method of your choice
@@ -147,25 +201,16 @@ def sampler(
     sample: ndarray
         Values sampled from dist, shape (Nsamples,)
     """
-    def inverse_function(y, x_values, y_values):
-        for right_index, y_value in enumerate(y_values):
-            if y_value > y:
-                break
-        left_y_value, right_y_value = y_values[right_index - 1], y_values[right_index]
-        left_x_value, right_x_value = x_values[right_index - 1], x_values[right_index]
-        dx = (y - left_y_value) / (right_y_value - left_y_value)
-        return left_x_value + dx * (right_x_value - left_x_value)
-
-    cdf = np.zeros(N_cdf_samples)
-    x_values = np.linspace(min, max, N_cdf_samples)
-    for i, right in enumerate(x_values):
-        cdf[i] = romberg_integrator(dist, (min, right), args=args)
-    cdf /= np.max(cdf)
-    random = rng(Nsamples)
     sample = np.zeros(Nsamples)
-    for i in range(Nsamples):
-        sample[i] = inverse_function(random[i], x_values, cdf)
+    i = 0
+    while i < Nsamples:
+        random_x = min + (max-min)*rng(1)
+        random_y = rng(1)
+        if random_y < dist(random_x, *args):
+            sample[i] = random_x
+            i += 1
     return sample
+
 
 
 #### Sorting block ####
@@ -360,52 +405,52 @@ def main():
     N_generate = 10000
     xx = np.linspace(xmin, xmax, N_generate)
 
-    integrand = lambda x, a, b, c: 4 * np.pi * x**2 * n(x, 1, Nsat, a, b, c)  # insert the correct function
+    integrand = lambda x, a, b, c: 4 * np.pi * x**2 * n(x, 1, Nsat, a, b, c)
     integral, err = romberg_integrator(
         integrand, bounds, order=10, args=(a, b, c), err=True
     )
 
     # Normalisation
-    A = Nsat / integral  # to be computed
-    with open("Calculations/satellite_A.txt", "w") as f:
-        f.write(f"{A:.12g}\n")
-    integrand = lambda x, a, b, c: 4 * np.pi * x**2 * n(x, A, Nsat, a, b, c)  # replace by the correct function
+    A = Nsat / integral
+    err_A = Nsat / (integral**2) * err
+    integrand = lambda x, a, b, c: 4 * np.pi * x**2 * n(x, A, Nsat, a, b, c)
     integrated_Nsat = romberg_integrator(
         integrand, bounds, order=10, args=(a, b, c), err=False
     )
+    with open("Calculations/satellite_A.txt", "w") as f:
+        f.write(f"{A:.12g} & {err_A:.3e} & {np.abs(integrated_Nsat - Nsat):.3e}\n")
 
     p_of_x = (
-        lambda x: 4*np.pi*x**2*n(x, A, Nsat, a, b, c) / (Nsat**2)
-    )  # replace by the normalised distribution of satellite galaxies as a function of x
+        lambda x: 4*np.pi*x**2*n(x, A, 1, a, b, c))
 
+    dp_dx = lambda x: 8*np.pi*x*p_of_x(x) + 4*np.pi*x**2*dn_dx(x, A, 1, a, b, c)
+    x_max, _, _ = root_finder(dp_dx, (0.1, .5))
+    p_max = p_of_x(x_max)
+    p_of_x_norm = (lambda x: 4*np.pi*x**2*n(x, A, 1, a, b, c) / p_max)
+    
     global seed
-    seed = 123456789
-    random_samples = sampler(p_of_x, min=xmin, max=xmax, Nsamples=N_generate, args=())
+    seed = 31415926535
+    random_samples = sampler(p_of_x_norm, min=xmin, max=xmax, Nsamples=N_generate, args=())
 
     edges = 10 ** np.linspace(np.log10(xmin), np.log10(xmax), 21)
 
-    hist = np.histogram(
-        random_samples, bins=edges
-    )[
-        0
-    ]  # replace!
-    hist_scaled = (hist * 2 / (edges[1:]+edges[:-1])
-    )  # replace; this is NOT what you should be plotting, this is just a random example to get a plot with reasonable y values (think about how you *should* scale hist)
+    hist = np.histogram(random_samples, bins=edges)[0]
+    hist_scaled = hist / (edges[1:]-edges[:-1])
 
     fig = plt.figure()
-    relative_radius = np.linspace(xmin,xmax, 1000)  # replace!
-    analytical_function = 4*np.pi*relative_radius**2*n(relative_radius, A, Nsat, a, b, c)  # replace
+    relative_radius = np.linspace(xmin,xmax, 1000)
+    analytical_function = 4*np.pi*relative_radius**2*n(relative_radius, A, 1, a, b, c) * N_generate
 
     fig1b, ax = plt.subplots()
     ax.stairs(
         hist_scaled, edges=edges, fill=True, label="Satellite galaxies"
-    )  # just an example line, correct this!
+    )
     plt.plot(
         relative_radius, analytical_function, "r-", label="Analytical solution"
-    )  # correct this according to the exercise!
+    )
     ax.set(
         xlim=(xmin, xmax),
-        # ylim=(10 ** (-3), 10),  # you may or may not need to change ylim
+        ylim=(10 ** (-3), 1e5),
         yscale="log",
         xscale="log",
         xlabel="Relative radius",
