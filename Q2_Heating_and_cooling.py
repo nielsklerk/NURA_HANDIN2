@@ -172,13 +172,13 @@ def main():
         root, aerr, rerr, steps = root_finder(lambda x: equilibrium2(x, Z, Tc, psi, nH, A, xi, aB), bracket, return_num_step=True)
         if nH == 1e-4:
             with open("Calculations/equilibrium_low_density.txt", "w") as f:
-                f.write(f"{root:.12g} & {equilibrium2(root, Z, Tc, psi, nH, A, xi, aB):.3e} & {int(steps)} & {time:.3e}")
+                f.write(f"{root:.12g} & {aerr:.3e} & {rerr:.3e} & {int(steps)} & {time:.3e}")
         elif nH == 1:
             with open("Calculations/equilibrium_mid_density.txt", "w") as f:
-                f.write(f"{root:.12g} & {equilibrium2(root, Z, Tc, psi, nH, A, xi, aB):.3e} & {int(steps)} & {time:.3e}")
+                f.write(f"{root:.12g} & {aerr:.3e} & {rerr:.3e} & {int(steps)} & {time:.3e}")
         elif nH == 1e4:
             with open("Calculations/equilibrium_high_density.txt", "w") as f:
-                f.write(f"{root:.12g} & {equilibrium2(root, Z, Tc, psi, nH, A, xi, aB):.3e} & {int(steps)} & {time:.3e}")
+                f.write(f"{root:.12g} & {aerr:.3e} & {rerr:.3e} & {int(steps)} & {time:.3e}")
 
 
 if __name__ == "__main__":
