@@ -92,7 +92,7 @@ def romberg_integrator(
         r[:order - i] = (N_p * r[1:order - i + 1] - r[:order - i]) / (N_p - 1)
     if err:
         return r[0], np.abs(r[0]-r[1])  # (value, error)
-    return r[0]
+    return r[0] # value
 
 
 #### Sampler block ####
@@ -121,58 +121,6 @@ def rng(N):
         return rnds[0]
     return rnds
 
-def root_finder(
-    func: callable,  # add derivative if using Newton-Raphson
-    bracket: tuple,
-    atol: float = 1e-6,
-    rtol: float = 1e-6,
-    max_iters: int = 100,
-) -> tuple[float, float, float]:
-    """
-    Find a root of a function
-
-    Parameters
-    ----------
-    func : callable
-        Function to find root of
-    bracket : tuple
-        Bracket for which to find first secant
-    atol : float, optional
-        Absolute tolerance.
-        The default is 1e-6
-    rtol : float, optional
-        Relative tolerance.
-        The default is 1e-6
-    max_iters: int, optional
-        Maximum number of iterations.
-        The default is 100
-
-    Returns
-    -------
-    root : float
-        Approximate root
-    aerr : float
-        Absolute error
-    rerr : float
-        Relative error
-    """
-    # False Position
-    a, b = bracket  
-    previous_c = np.inf
-    for _ in range(max_iters):
-        c = b - ((b-a)*func(b))/(func(b)-func(a))
-        if func(a)*func(c) < 0:
-            b = np.copy(c)
-        else:
-            a = np.copy(c)
-        aerr = np.abs(c - previous_c)
-        if aerr < atol:
-            return c, aerr, rerr
-        rerr = np.abs(aerr /c)
-        if rerr < rtol:
-            return c, aerr, rerr
-        previous_c = np.copy(c)
-    return c, aerr, rerr
 
 def sampler(
     dist: callable,
@@ -423,10 +371,8 @@ def main():
     p_of_x = (
         lambda x: 4*np.pi*x**2*n(x, A, 1, a, b, c))
 
-    dp_dx = lambda x: 8*np.pi*x*p_of_x(x) + 4*np.pi*x**2*dn_dx(x, A, 1, a, b, c)
-    x_max, _, _ = root_finder(dp_dx, (0.1, .5))
-    p_max = p_of_x(x_max)
-    p_of_x_norm = (lambda x: 4*np.pi*x**2*n(x, A, 1, a, b, c) / p_max)
+    p_max = np.max(p_of_x(xx))
+    p_of_x_norm = lambda x: p_of_x(x) / p_max
     
     global seed
     seed = 31415926535
