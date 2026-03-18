@@ -3,15 +3,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def n(
-    x: float | np.ndarray, A: float, Nsat: float, a: float, b: float, c: float
-) -> float | np.ndarray:
+def n(x: np.ndarray, A: float, Nsat: float, a: float, b: float, c: float) -> np.ndarray:
     """
     Number density profile of satellite galaxies
 
     Parameters
     ----------
-    x : float | ndarray
+    x : ndarray
         Radius in units of virial radius; x = r / r_virial
     A : float
         Normalisation
@@ -26,24 +24,29 @@ def n(
 
     Returns
     -------
-    float | ndarray
+    ndarray
         Same type and shape as x. Number density of satellite galaxies
         at given radius x.
     """
-    x = np.asarray(x)
+    x_array = np.asarray(x)
     n = np.zeros_like(x)
-    n[x>0] = A * Nsat * (x[x>0] / b) ** (a-3) * np.exp(-(x[x>0] / b) ** c) # REPLACE BOOL MASK WITH OWN CODE
+
+    # Function is only defined for positive x
+    n[x_array>0] = A * Nsat * (x_array[x_array>0] / b) ** (a-3) * np.exp(-(x_array[x_array>0] / b) ** c)
+
+    # Returns float if input is float
+    if type(x) == float:
+        return n.item()
+    # Else returns ndarray
     return n
 
 
 ##### Integrator block #####
 
 
-# Below we provide a template for romberg integration
-# You can implement this or use another integration method based on some form of Richardson extrapolation
 def romberg_integrator(
     func: callable, bounds: tuple, order: int = 5, err: bool = False, args: tuple = ()
-) -> float | tuple[float, float]:
+) -> float:
     """
     Romberg integration method
 
@@ -72,6 +75,7 @@ def romberg_integrator(
     """
     a, b = bounds
     h = b - a
+
     r = np.zeros(order)
     r[0] = 0.5 * h * (func(b, *args) - func(a, *args))
     N_p = 1
@@ -90,14 +94,17 @@ def romberg_integrator(
     for i in range(1, order):
         N_p *= 4
         r[:order - i] = (N_p * r[1:order - i + 1] - r[:order - i]) / (N_p - 1)
+
+    # Returns error if needed
     if err:
         return r[0], np.abs(r[0]-r[1])  # (value, error)
-    return r[0]
+    return r[0] # value
 
 
 #### Sampler block ####
 
-def rng(N):
+
+def rng(N: float ):
     global seed
     seed = np.uint(seed)
     a = 4294957665
@@ -117,7 +124,10 @@ def rng(N):
         seed = seed ^ (seed>>a_3)
         u = seed / np.float64(2**64)
         rnds[i] = u
+    if N==1:
+        return rnds[0]
     return rnds
+
 
 def sampler(
     dist: callable,
@@ -125,7 +135,6 @@ def sampler(
     max: float,
     Nsamples: int,
     args: tuple = (),
-    N_cdf_samples = 1000
 ) -> np.ndarray:
     """
     Sample a distribution using sampling method of your choice
@@ -147,24 +156,14 @@ def sampler(
     sample: ndarray
         Values sampled from dist, shape (Nsamples,)
     """
-    def inverse_function(y, x_values, y_values):
-        for right_index, y_value in enumerate(y_values):
-            if y_value > y:
-                break
-        left_y_value, right_y_value = y_values[right_index - 1], y_values[right_index]
-        left_x_value, right_x_value = x_values[right_index - 1], x_values[right_index]
-        dx = (y - left_y_value) / (right_y_value - left_y_value)
-        return left_x_value + dx * (right_x_value - left_x_value)
-
-    cdf = np.zeros(N_cdf_samples)
-    x_values = np.linspace(min, max, N_cdf_samples)
-    for i, right in enumerate(x_values):
-        cdf[i] = romberg_integrator(dist, (min, right), args=args)
-    cdf /= np.max(cdf)
-    random = rng(Nsamples)
     sample = np.zeros(Nsamples)
-    for i in range(Nsamples):
-        sample[i] = inverse_function(random[i], x_values, cdf)
+    i = 0
+    while i < Nsamples:
+        random_x = min + (max-min)*rng(1)
+        random_y = rng(1)
+        if random_y < dist(random_x, *args):
+            sample[i] = random_x
+            i += 1
     return sample
 
 
@@ -193,6 +192,12 @@ def sort_array(
         Sorted array (same shape as arr)
 
     """
+    def roll(array, shift):
+        shifted_array = np.empty_like(array)
+        shifted_array[:shift] = array[-shift:]
+        shifted_array[shift:] = array[:-shift]
+        return shifted_array
+    
     if inplace:
         sorted_arr = arr
     else:
@@ -212,11 +217,10 @@ def sort_array(
                 if sorted_arr[l] <= sorted_arr[r]:
                     l += 1
                 else:
-                    sorted_arr[l:r+1] = np.roll(sorted_arr[l:r+1], 1) # REPLACE ROLL WITH OWN FUNCTION
-                    index_array[l:r+1] = np.roll(index_array[l:r+1], 1)
+                    sorted_arr[l:r+1] = roll(sorted_arr[l:r+1], 1) # REPLACE ROLL WITH OWN FUNCTION
+                    index_array[l:r+1] = roll(index_array[l:r+1], 1)
                     l += 1
                     r += 1
-
         step *= 2
     if index:
         return index_array
@@ -250,8 +254,8 @@ def choice(arr: np.ndarray, size: int = 1) -> np.ndarray:
 
 
 def dn_dx(
-    x: float | np.ndarray, A: float, Nsat: float, a: float, b: float, c: float
-) -> float | np.ndarray:
+    x: np.ndarray, A: float, Nsat: float, a: float, b: float, c: float
+) -> np.ndarray:
     """
     Analytical derivative of number density provide
 
@@ -272,7 +276,7 @@ def dn_dx(
 
     Returns
     -------
-    float | ndarray
+    ndarray
         Same type and shape as x. Derivative of number density of
         satellite galaxies at given radius x.
     """
@@ -360,52 +364,50 @@ def main():
     N_generate = 10000
     xx = np.linspace(xmin, xmax, N_generate)
 
-    integrand = lambda x, a, b, c: 4 * np.pi * x**2 * n(x, 1, Nsat, a, b, c)  # insert the correct function
+    integrand = lambda x, a, b, c: 4 * np.pi * x**2 * n(x, 1, Nsat, a, b, c)
     integral, err = romberg_integrator(
         integrand, bounds, order=10, args=(a, b, c), err=True
     )
 
     # Normalisation
-    A = Nsat / integral  # to be computed
-    with open("Calculations/satellite_A.txt", "w") as f:
-        f.write(f"{A:.12g}\n")
-    integrand = lambda x, a, b, c: 4 * np.pi * x**2 * n(x, A, Nsat, a, b, c)  # replace by the correct function
+    A = Nsat / integral
+    err_A = Nsat / (integral**2) * err
+    integrand = lambda x, a, b, c: 4 * np.pi * x**2 * n(x, A, Nsat, a, b, c)
     integrated_Nsat = romberg_integrator(
         integrand, bounds, order=10, args=(a, b, c), err=False
     )
+    with open("Calculations/satellite_A.txt", "w") as f:
+        f.write(f"{A:.12g} & {err_A:.3e} & {np.abs(integrated_Nsat - Nsat):.3e}\n")
 
     p_of_x = (
-        lambda x: 4*np.pi*x**2*n(x, A, Nsat, a, b, c) / (Nsat**2)
-    )  # replace by the normalised distribution of satellite galaxies as a function of x
+        lambda x: 4*np.pi*x**2*n(x, A, 1, a, b, c))
 
+    p_max = np.max(p_of_x(xx))
+    p_of_x_norm = lambda x: p_of_x(x) / p_max
+    
     global seed
-    seed = 123456789
-    random_samples = sampler(p_of_x, min=xmin, max=xmax, Nsamples=N_generate, args=())
+    seed = 31415926535
+    random_samples = sampler(p_of_x_norm, min=xmin, max=xmax, Nsamples=N_generate, args=())
 
     edges = 10 ** np.linspace(np.log10(xmin), np.log10(xmax), 21)
 
-    hist = np.histogram(
-        random_samples, bins=edges
-    )[
-        0
-    ]  # replace!
-    hist_scaled = (hist * 2 / (edges[1:]+edges[:-1])
-    )  # replace; this is NOT what you should be plotting, this is just a random example to get a plot with reasonable y values (think about how you *should* scale hist)
+    hist = np.histogram(random_samples, bins=edges)[0]
+    hist_scaled = hist / (edges[1:]-edges[:-1])
 
     fig = plt.figure()
-    relative_radius = np.linspace(xmin,xmax, 1000)  # replace!
-    analytical_function = 4*np.pi*relative_radius**2*n(relative_radius, A, Nsat, a, b, c)  # replace
+    relative_radius = np.linspace(xmin,xmax, 1000)
+    analytical_function = 4*np.pi*relative_radius**2*n(relative_radius, A, 1, a, b, c) * N_generate
 
     fig1b, ax = plt.subplots()
     ax.stairs(
         hist_scaled, edges=edges, fill=True, label="Satellite galaxies"
-    )  # just an example line, correct this!
+    )
     plt.plot(
         relative_radius, analytical_function, "r-", label="Analytical solution"
-    )  # correct this according to the exercise!
+    )
     ax.set(
         xlim=(xmin, xmax),
-        # ylim=(10 ** (-3), 10),  # you may or may not need to change ylim
+        ylim=(10 ** (-3), 1e5),
         yscale="log",
         xscale="log",
         xlabel="Relative radius",
