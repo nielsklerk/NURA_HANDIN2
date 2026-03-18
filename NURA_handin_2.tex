@@ -81,7 +81,7 @@ Filling in the equation for $n(x)$ and isolating $A$ results in
     A = \frac{\langle N_{sat}\rangle}{\int_{x=0}^{x=5} dx\; 4\pi x^2 \langle N_{sat}\rangle\left(\frac{x}{b}\right)^{a-3}\exp\left[-\left(\frac{x}{b}\right)^c\right]}
 \end{equation}
 
-To evaluate this integral, we will use Romberg integration. This numerical integration technique combines different estimates of the integral $\int f(x)dx$ into a better approximation. It starts by finding the area between the two endpoints of the integral $r_0$. For the next estimate, it uses the previous estimate and the sum of function evaluations between the endpoints, scaled by the step size $r_{i+1}=\frac{1}{2}[r_i+\Delta_{i+1}\sum_j f (x_j)]$. 
+To evaluate this integral, we will use Romberg integration. This numerical integration technique combines different estimates of the integral $\int f(x)dx$ into a better approximation. It starts by finding the area between the two endpoints of the integral $r_0$. For the next estimate, it uses the previous estimate and the sum of function evaluations between the endpoints, scaled by the step size $r_{i+1}=\frac{1}{2}\left[r_i+\Delta_{i+1}\sum_j f (x_j)\right]$. 
 
 After repeating this step $m-1$ times, there are $m$ estimates for the value of the integral. By using the equation 
 \begin{equation}
@@ -98,7 +98,6 @@ Applying the Romberg integration to \autoref{eq:normalization constant}, we find
 Normalization constant \(A\) & Absolute error & Absolute error $N_\mathrm{sat}$ \\
 \hline
 \input{\CalcDir/satellite_A.txt} \\
-\\
 \hline
 \end{tabular}
 \end{table}
@@ -128,7 +127,7 @@ First, a random x value $x_\mathrm{rand}$ is sampled from a uniform distribution
 \caption{Comparison between the analytical satellite distribution \(N(x)\) and the histogram of 10 000 sampled satellite galaxies in logarithmic bins.}
 \end{figure}
 
-\textbf{Does your sampled distribution agree with the analytical prediction?}
+The sampled distribution largely agrees with the analytical prediction. However, below $\sim 10^{-2}$ there are no samples, whereas the analytical prediction is non-zero. This is due to the range of the relative radius values. There is a small probability that a uniformly sampled x value falls inside this range. Additionally, the probability density in this range is also small, such that even when a uniformly sampled x value falls inside this range, the change that is accepted into the sample is also small. 
 
 \subsection{Code for sampling}
 
@@ -138,6 +137,7 @@ First, a random x value $x_\mathrm{rand}$ is sampled from a uniform distribution
 
 \textbf{Describe the selection of 100 galaxies (equal probability, no duplicates, no rejection).
 Explain the sorting algorithm you used.}
+We would like to make a selection of 100 galaxies from our sample of 10000 galaxies. For this, we want to shuffle the galaxies randomly and take the first 100. This is done by creating an array with 10000 random floats and an array with elements 0, 1, 2, ...,  10000-1. Next, the array with random numbers is sorted by swapping different elements. The same swaps are performed on the index array. Once the array with random numbers is sorted, we will have obtained an index array that is randomized. The first 100 random indices are used to make the selection of galaxies. The relative radii are then sorted to find the number of galaxies within different relative radii.
 
 \begin{figure}[H]
 \centering
