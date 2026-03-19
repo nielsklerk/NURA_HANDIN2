@@ -95,7 +95,7 @@ Normalization constant \(A\) & Absolute error & Absolute error $\langle N_{sat}\
 
 \subsection{Code for the integrator}
 
-\lstinputlisting[language=Python, firstline=0, lastline=98]{\CodeDir/satellites_integrator_code.txt}
+\lstinputlisting[language=Python, firstline=0, lastline=100]{\CodeDir/satellites_integrator_code.txt}
 
 \subsection{(1b) Sampling the satellite distribution}
 We would like to sample random galaxies from the number density. To find the probability density, we need to find the number of galaxies between $x$ and $x+dx$. 
@@ -120,7 +120,7 @@ The sampled distribution largely agrees with the analytical prediction. However,
 
 \subsection{Code for sampling}
 
-\lstinputlisting[language=Python, firstline=101, lastline=191]{\CodeDir/satellites_sampling_code.txt}
+\lstinputlisting[language=Python, firstline=103, lastline=193]{\CodeDir/satellites_sampling_code.txt}
  
 \subsection{(1c) Selecting and sorting satellites}
 We want to select 100 galaxies from our sample of 10000 galaxies with equal probability, without duplicates, and without rejection. To do this, we randomly shuffle the galaxies and take the first 100. This ensures the conditions. First, an array of 10000 random floats and an index array of elements 0, 1, 2, ..., 10000-1 are created. Next, the array with random numbers is sorted by swapping different elements. When the array with random numbers is sorted, we obtain a randomized index array. The first 100 random indices are used to select galaxies. The relative radii are then sorted to find the number of galaxies within different relative radii. To sort both the array with random numbers and the selection of galaxies, merge sort is used. This algorithm splits up the array into single elements and then combines adjacent elements whilst sorting them until a fully sorted array is recovered. 
@@ -135,7 +135,7 @@ This figure shows that most of the galaxies are in a small range of relative rad
 
 \subsection{Code for selection and sorting}
 
-\lstinputlisting[language=Python, firstline=194, lastline=292]{\CodeDir/satellites_selection_code.txt}
+\lstinputlisting[language=Python, firstline=196, lastline=294]{\CodeDir/satellites_selection_code.txt}
 
 \subsection{(1d) Numerical derivative}
 The analytical formula for the derivative of the number density is given by
@@ -181,14 +181,13 @@ The analytical and numerical derivatives are the same. This is because Ridders' 
 
 \subsection{Code for derivative calculation}
 
-\lstinputlisting[language=Python, firstline=298]{\CodeDir/satellites_derivative_code.txt}
+\lstinputlisting[language=Python, firstline=297]{\CodeDir/satellites_derivative_code.txt}
 
 \section{Heating and cooling in HII regions}
 
 
 \subsection{(2a) Photoionization heating and radiative recombination cooling}
 
-\textbf{Describe the implementation of your root-finding method (e.g. bisection, Newton-Raphson).}
 We want to find the equilibrium temperature of an HII region in Orion, where the only heating is produced by photoionization 
 \begin{equation}
     \Gamma_\mathrm{pe} = \alpha_\mathrm{B}n_\mathrm{H}n_\mathrm{e}\psi k_\mathrm{B}T_\mathrm{c}
@@ -250,7 +249,7 @@ $10^{-4}$ & \input{\CalcDir/equilibrium_low_density.txt} \\
 $1$ & \input{\CalcDir/equilibrium_mid_density.txt} \\
 $10^4$ & \input{\CalcDir/equilibrium_high_density.txt} \\
 \hline
-\end{tabular}
+\end{tabular}   
 \end{table}
 
 The equilibrium temperature of the low gas density is orders of magnitude higher than the equilibrium temperature of the intermediate and high gas densities. Furthermore, it took many more steps to converge to the equilibrium temperature in the more realistic model compared to the simpler one.
@@ -259,7 +258,5 @@ The equilibrium temperature of the low gas density is orders of magnitude higher
 \subsection{Code for Exercise 2}
 
 \lstinputlisting[language=Python]{\CodeDir/heatingcooling_code.txt} 
-
-\section{Conclusions}
 
 \end{document}
