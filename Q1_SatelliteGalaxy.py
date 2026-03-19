@@ -129,14 +129,14 @@ def rng(N: int) -> np.ndarray:
     for i in range(N):
 
         # MWC 32-bit
-        seed = seed & (2**32 - 1)
+        seed &= (2**32 - 1)
         seed = a*(seed & (2**32 - 1)) + (seed >> 32)
-        seed = seed & (2**32 - 1)
+        seed &= (2**32 - 1)
 
         # 64-bit XOR-shift
-        seed = seed ^ (seed>>a_1)
-        seed = seed ^ (seed<<a_2)
-        seed = seed ^ (seed>>a_3)
+        seed ^= (seed>>a_1)
+        seed ^= (seed<<a_2)
+        seed ^= (seed>>a_3)
 
         # Calculating the float
         u = seed / np.float64(2**64)
@@ -385,15 +385,16 @@ def compute_derivative(
     # Iteratively improve the estimate using the previous ones
     for i in range(1, max_iters):
         N_p *= d**2
+        previous_best = r[0]
 
         # Calculate new estimates
         r[:max_iters - i] = (N_p * r[1:max_iters - i + 1] - r[:max_iters - i]) / (N_p - 1)
 
         new_error =  np.abs(r[0]-r[1])
 
-        # If the error increases stop
+        # If the error increases return previous best
         if new_error > error:
-            break
+            return previous_best
         else:
             error = new_error
 

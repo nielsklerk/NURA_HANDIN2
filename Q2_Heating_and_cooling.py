@@ -89,7 +89,7 @@ def root_finder(
     previous_c = np.inf
 
     # Turning on false position
-    false_position=True
+    false_position= not steps_method_swap<=0
 
     for num_step in range(max_iters):
 
@@ -150,7 +150,7 @@ def main():
         )
     
     # Finding root equilibrium 1
-    root, aerr, rerr, steps = root_finder(lambda x: equilibrium1(x, Z, Tc, psi), bracket, return_num_step=True)  # replace with your root finder
+    root, aerr, rerr, steps = root_finder(lambda x: equilibrium1(x, Z, Tc, psi), bracket, steps_method_swap=1, return_num_step=True)  # replace with your root finder
 
     with open("Calculations/equilibrium_temp_simple.txt", "w") as f:
         f.write(f"{root:.12g} & {aerr:.3e} & {rerr:.3e} & {int(steps)} & {time:.3e}")
@@ -169,7 +169,7 @@ def main():
             / number
         )
         # Finding root equilibrium 1=1
-        root, aerr, rerr, steps = root_finder(lambda x: equilibrium2(x, Z, Tc, psi, nH, A, xi, aB), bracket, return_num_step=True)
+        root, aerr, rerr, steps = root_finder(lambda x: equilibrium2(x, Z, Tc, psi, nH, A, xi, aB), bracket, steps_method_swap=31, return_num_step=True)
         if nH == 1e-4:
             with open("Calculations/equilibrium_low_density.txt", "w") as f:
                 f.write(f"{root:.12g} & {aerr:.3e} & {rerr:.3e} & {int(steps)} & {time:.3e}")
