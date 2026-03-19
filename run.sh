@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # If you get a permission denied error for run.sh itself, run this line in the terminal:
-# chmod +x ./run.sh
+chmod +x ./run.sh
 
 # If you get errors about weird (return) characters, and/or you edited run.sh on Windows, run this command:
-# dos2unix ./run.sh &>/dev/null
+dos2unix ./run.sh &>/dev/null
 
 # Make sure you do NOT run in a virtual environment (e.g. conda, uv), or your results may be different than when we run your code
 # On the STRW computers, you may need to run "module purge" if you load any modules at startup

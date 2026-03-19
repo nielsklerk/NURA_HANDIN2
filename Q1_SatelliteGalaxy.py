@@ -74,8 +74,9 @@ def romberg_integrator(
     h = b - a
 
     r = np.zeros(order)
-    r[0] = 0.5 * h * (func(b, *args) - func(a, *args))
+    r[0] = 0.5 * h * (func(b, *args) + func(a, *args))
     N_p = 1
+    # Create the list of starting estimates
     for i in range(1, order):
         r[i] = 0
         delta = np.copy(h)
@@ -88,6 +89,7 @@ def romberg_integrator(
         N_p *= 2
 
     N_p = 1
+    # Iteratively improve the estimates
     for i in range(1, order):
         N_p *= 4
         r[:order - i] = (N_p * r[1:order - i + 1] - r[:order - i]) / (N_p - 1)
@@ -117,21 +119,21 @@ def rng(N: int) -> np.ndarray:
         if N=1 returns float instead
     """
     global seed
-    seed = np.uint(seed)
+    seed = np.uint64(seed)
 
     # Parameters for rng
-    a = 4294957665
-    a_1 = 21
-    a_2 = 35
-    a_3 = 4
+    a = np.uint64(4294957665)
+    a_1 = np.uint64(21)
+    a_2 = np.uint64(35)
+    a_3 = np.uint64(4)
 
     rnds = np.zeros(N)
     for i in range(N):
 
         # MWC 32-bit
-        seed &= (2**32 - 1)
-        seed = a*(seed & (2**32 - 1)) + (seed >> 32)
-        seed &= (2**32 - 1)
+        seed &= np.unint64(2**32 - 1)
+        seed = a*(seed & np.unint64(2**32 - 1)) + (seed >> np.uint64(32))
+        seed &= np.unint64(2**32 - 1)
 
         # 64-bit XOR-shift
         seed ^= (seed>>a_1)
