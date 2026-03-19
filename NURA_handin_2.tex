@@ -41,24 +41,15 @@
 
 \title{NURa Hand-in 2}
 \author{Niels de Klerk (s3640477)}
-\date{Date}
+\date{March 19, 2026}
 
 \begin{document}
 \maketitle
-
-\textit{Write a short description of your solution in each section. Explain your choices. Explicitly draw conclusions from your results.}
-
-\textit{You can refer to selected lines of code where you think it is necessary. However, you must provide the full code relevant to each (sub)question below it.}
-
-\textit{Don't forget to describe your figures and mention what conclusions you draw from them!}
 
 
 \section{Satellite galaxies around a massive central}
 
 \subsection{(1a) Determining the normalization}
-
-\textbf{Explain the integration method used (e.g. Romberg integration or another Richardson method).  
-Describe how you implemented the spherical volume element \(dV\).}
 The satellite galaxies around a central follow the number density
 \begin{equation}
     n(x) = A\langle N_{sat}\rangle\left(\frac{x}{b}\right)^{a-3}\exp\left[-\left(\frac{x}{b}\right)^c\right]
@@ -85,9 +76,9 @@ To evaluate this integral, we will use Romberg integration. This numerical integ
 
 After repeating this step $m-1$ times, there are $m$ estimates for the value of the integral. By using the equation 
 \begin{equation}
-    r_{i,j+1}=\frac{4^{j+1}{r_{i+1, j}-S_{i,j}}}{4^{j+1}-1}
+    r_{i,j+1}=\frac{4^{j+1}{r_{i+1, j}-r_{i,j}}}{4^{j+1}-1}
 \end{equation}
-where the initial values are $r_{i,0}$. This step repeats until there is a single value remaining that uses a combination of all the starting estimates. 
+where the initial values are $r_{i,0}$. This step repeats until a single value remains, obtained by combining all the starting estimates. 
 
 Applying the Romberg integration to \autoref{eq:normalization constant}, we find the following value for the normalization constant.
 \begin{table}[H]
@@ -95,7 +86,7 @@ Applying the Romberg integration to \autoref{eq:normalization constant}, we find
 \caption{Normalization constant of the satellite galaxy profile.}
 \begin{tabular}{|c|c|c|}
 \hline
-Normalization constant \(A\) & Absolute error & Absolute error $N_\mathrm{sat}$ \\
+Normalization constant \(A\) & Absolute error & Absolute error $\langle N_{sat}\rangle$ \\
 \hline
 \input{\CalcDir/satellite_A.txt} \\
 \hline
@@ -107,19 +98,17 @@ Normalization constant \(A\) & Absolute error & Absolute error $N_\mathrm{sat}$ 
 \lstinputlisting[language=Python, firstline=0, lastline=98]{\CodeDir/satellites_integrator_code.txt}
 
 \subsection{(1b) Sampling the satellite distribution}
-
-\textbf{Describe the sampling method used (e.g. rejection sampling).  
-Explain how the random number generator was implemented and how its randomness was tested.}
 We would like to sample random galaxies from the number density. To find the probability density, we need to find the number of galaxies between $x$ and $x+dx$. 
 \begin{equation}
     \int dx\;N(x) = \int dx\;4\pi x^2n(x)
 \end{equation}
 So we get $N(x)dx=4\pi x^2n(x)dx$. The probability density needs to be normalized so we get
 \begin{equation}
-    p(x)dx = \frac{N(x)dx}{N_\mathrm{sat}} = \frac{4\pi x^2n(x)dx}{N_\mathrm{sat}}
+    p(x)dx = \frac{N(x)dx}{\langle N_{sat}\rangle} = \frac{4\pi x^2n(x)dx}{\langle N_{sat}\rangle}
 \end{equation}
-To sample from this distribution, we will use rejection sampling. This is most efficient when the \textbf{MORE EXPLANATION}.
-First, a random x value $x_\mathrm{rand}$ is sampled from a uniform distribution from 0 to 5. Next, a random y value $y_\mathrm{rand}$ is sampled from a uniform distribution from 0 to 1. If $p(x_\mathrm{rand}) > y_\mathrm{rand}$, the $x_\mathrm{rand}$ is accepted into the sample. Otherwise, a new x and y value are sampled until the required number of samples is reached.
+To sample from this distribution, we will use rejection sampling. For this, we need a random number generator (RNG). The RNG we have implemented has 2 subgenerators: Multiply with Carry (MWC) with base $2^{32}$ and a 64-bit XOR-shifter. The MWC starts with a 64-bit unsigned integer x between 0 and $2^{32}$. Then it applies $a * (x \& (2^{32} - 1)) + (x >> 32)$ and uses only the lowest 32 bits for the random number that is fed into the 64-bit XOR-shifter, which shift the bits left, right, and left by certain amounts to generate a new random number, which is returned. To test the RNG, we calculate the mean, variance, and KS statistic and p-value from the KS test, which should respectively be $\sim0.5$, $\sim1/12$, $\sim0$, and $\gtrsim0.05$. When we generate 1.000.000 samples using the RNG, we do indeed find values that closely follow the expected values, which indicates that this is a good RNG. Now that we have an RNG, we can apply the rejection sampling to the distribution. First, the probability density should be divided by its maximum such that the new maximum is 1. Next, a random x value $x_\mathrm{rand}$ is sampled from a uniform distribution from 0 to 5. After that, a random y value $y_\mathrm{rand}$ is sampled from a uniform distribution from 0 to 1. If $p(x_\mathrm{rand}) > y_\mathrm{rand}$, the $x_\mathrm{rand}$ is accepted into the sample. Otherwise, new x and y values are sampled until the required number of samples is reached.
+
+Using this technique, 10000 samples are drawn from the probability density. Next, the samples are binned in logarithmic bins and scaled by the bin width and the number of samples.
 
 \begin{figure}[H]
 \centering
@@ -131,13 +120,10 @@ The sampled distribution largely agrees with the analytical prediction. However,
 
 \subsection{Code for sampling}
 
-\lstinputlisting[language=Python, firstline=98, lastline=168]{\CodeDir/satellites_sampling_code.txt}
+\lstinputlisting[language=Python, firstline=101, lastline=191]{\CodeDir/satellites_sampling_code.txt}
  
 \subsection{(1c) Selecting and sorting satellites}
-
-\textbf{Describe the selection of 100 galaxies (equal probability, no duplicates, no rejection).
-Explain the sorting algorithm you used.}
-We would like to make a selection of 100 galaxies from our sample of 10000 galaxies. For this, we want to shuffle the galaxies randomly and take the first 100. This is done by creating an array with 10000 random floats and an array with elements 0, 1, 2, ...,  10000-1. Next, the array with random numbers is sorted by swapping different elements. The same swaps are performed on the index array. Once the array with random numbers is sorted, we will have obtained an index array that is randomized. The first 100 random indices are used to make the selection of galaxies. The relative radii are then sorted to find the number of galaxies within different relative radii.
+We want to select 100 galaxies from our sample of 10000 galaxies with equal probability, without duplicates, and without rejection. To do this, we randomly shuffle the galaxies and take the first 100. This ensures the conditions. First, an array of 10000 random floats and an index array of elements 0, 1, 2, ..., 10000-1 are created. Next, the array with random numbers is sorted by swapping different elements. When the array with random numbers is sorted, we obtain a randomized index array. The first 100 random indices are used to select galaxies. The relative radii are then sorted to find the number of galaxies within different relative radii. To sort both the array with random numbers and the selection of galaxies, merge sort is used. This algorithm splits up the array into single elements and then combines adjacent elements whilst sorting them until a fully sorted array is recovered. 
 
 \begin{figure}[H]
 \centering
@@ -145,11 +131,38 @@ We would like to make a selection of 100 galaxies from our sample of 10000 galax
 \caption{Cumulative number of selected galaxies as a function of relative radius.}
 \end{figure}
 
+This figure shows that most of the galaxies are in a small range of relative radii between 0.02 and 1. 
+
 \subsection{Code for selection and sorting}
 
-\lstinputlisting[language=Python, firstline=171, lastline=246]{\CodeDir/satellites_selection_code.txt}
+\lstinputlisting[language=Python, firstline=194, lastline=292]{\CodeDir/satellites_selection_code.txt}
 
 \subsection{(1d) Numerical derivative}
+The analytical formula for the derivative of the number density is given by
+
+\begin{equation}
+ \frac{dn}{dx}=\frac{A \langle N_{sat}\rangle}{b}
+  \left(\frac{x}{b}\right)^{a - 4}
+  \left( c \left(\frac{x}{b}\right)^c - a + 3 \right)
+  \exp\left(-\left(\frac{x}{b}\right)^c\right).
+\end{equation}
+We want to compare the value of the derivative obtained from the analytical formula with that obtained from the Ridders algorithm. Ridders algorithm starts with a list of $m$ estimates for different values of $h$ using the central difference 
+
+\begin{equation}
+    \frac{df}{dx}\approx\frac{f(x+h)-f(x-h)}{2h}
+\end{equation}
+
+Each consecutive $h$ is reduced by a factor $d$. Similar to Romberg integration, the estimates are combined using
+\begin{equation}
+    D_{i,j+1}=\frac{d^{2(j+1)}{D_{i+1, j}-D_{i,j}}}{d^{2(j+1)}-1}
+\end{equation}
+where the initial values are $D_{i,0}$. This step is repeated until one of the following conditions is met:
+\begin{enumerate}
+    \item The improvement over the previous value is smaller than the target error
+    \item The error grows
+    \item $m$ iterations are completed
+\end{enumerate}
+Using this algorithm for the derivative at $x=1$ gives
 
 \begin{table}[H]
 \centering
@@ -164,11 +177,11 @@ Numerical & \input{\CalcDir/satellite_deriv_numeric.txt} \\
 \end{tabular}
 \end{table}
 
-\textbf{Do your analytical and numerical derivatives agree? Why?}
+The analytical and numerical derivatives are the same. This is because Ridders' algorithm is an efficient algorithm that can get very low relative errors.
 
 \subsection{Code for derivative calculation}
 
-\lstinputlisting[language=Python, firstline=253, lastline=348]{\CodeDir/satellites_derivative_code.txt}
+\lstinputlisting[language=Python, firstline=298]{\CodeDir/satellites_derivative_code.txt}
 
 \section{Heating and cooling in HII regions}
 
@@ -176,13 +189,31 @@ Numerical & \input{\CalcDir/satellite_deriv_numeric.txt} \\
 \subsection{(2a) Photoionization heating and radiative recombination cooling}
 
 \textbf{Describe the implementation of your root-finding method (e.g. bisection, Newton-Raphson).}
+We want to find the equilibrium temperature of an HII region in Orion, where the only heating is produced by photoionization 
+\begin{equation}
+    \Gamma_\mathrm{pe} = \alpha_\mathrm{B}n_\mathrm{H}n_\mathrm{e}\psi k_\mathrm{B}T_\mathrm{c}
+\end{equation}
+and the only cooling is caused by radiative recombination.
+\begin{equation}
+    \Lambda_\mathrm{rr} = \alpha_\mathrm{B}n_\mathrm{H}n_\mathrm{e}\langle E_\mathrm{rr}\rangle
+\end{equation}
+with
+\begin{equation}
+    \langle E_\mathrm{rr}\rangle = \left[0.684 - 0.0416\ln\left(\frac{T_4}{Z^2}\right)\right]k_\mathrm{B}T
+\end{equation}
 
+The equilibrium temperature is the temperature where the heating and cooling terms are equal (i.e. $\Gamma_\mathrm{pe}-\Lambda_\mathrm{rr}=0$). To find this temperature, we use a combination of two algorithms. First, we use the false-position method.  It starts with a bracket $[a, b]$. From these two values, a new point $c$ is calculated using 
+\begin{equation}
+    c = b - \frac{b-a}{f(b)-f(a)}f(b)
+\end{equation}
+where $f$ is the difference between the cooling and heating equations $\Gamma_\mathrm{pe}-\Lambda_\mathrm{rr}$. Using $c$ and either $a$ or $b$, a new bracket $[c, d]$ is formed, where we demand that $f(c)f(d)<0$ with $d=a$ or $d=b$. This is repeated for some prespecified number of steps before the algorithm switches to the secant method. This method is very similar to the false-position method. The only difference is that the new bracket is always $[b, c]$. False-position converges more slowly than the secant method, but it does not diverge, unlike the secant method. By combining both algorithms this way, we first converge to a better bracket without diverging and then use the quick convergence of the secant method to find the root.
+In this case, we switch algorithms after 1 iteration. 
 \begin{table}[H]
 \centering
 \caption{Equilibrium temperature for the simplified heating–cooling model.}
 \begin{tabular}{|c|c|c|c|c|}
 \hline
-Temperature [K] & Absolute error & Relative error & Steps & Time [s]\\
+Temperature [K] & Absolute error [K] & Relative error & Steps & Time [s]\\
 \hline
 \input{\CalcDir/equilibrium_temp_simple.txt}
 \\
@@ -190,17 +221,30 @@ Temperature [K] & Absolute error & Relative error & Steps & Time [s]\\
 \end{tabular}
 \end{table}
 
-\textbf{How many iterations it took? Discuss the convergence of your root finder.}
+It took 8 iterations to reach an accurate result. The combination of the two algorithms does make it converge much faster, as when only false-position is used, the errors are around a factor $1000$ worse after double the number of steps. 
 
 \subsection{(2b) More realistic model}
+To make a more realistic model, we add one extra cooling mechanism, the free-free emission given by
+\begin{equation}
+    \Lambda_\mathrm{FF} = 0.54T_4^{0.37}\alpha_\mathrm{B}n_\mathrm{H}n_\mathrm{e}k_\mathrm{B}T
+\end{equation}
+and two heating mechanisms: heating by cosmic rays
+\begin{equation}
+    \Gamma_\mathrm{CR}=An_\mathrm{e}\xi_\mathrm{CR}
+\end{equation}
+and heating by MHD
+\begin{equation}
+    \Gamma_\mathrm{MHD}=8.9\cdot10^{-26}n_\mathrm{H}T_4
+\end{equation}
+So the new equation we want to solve for the equilibrium temperature is $\Gamma_\mathrm{pe} + \Gamma_\mathrm{CR} + \Gamma_\mathrm{MHD} -\Lambda_\mathrm{rr} - \Lambda_\mathrm{FF}=0$. We again use the same algorithm, but this time switch method after 31 steps. 
 
 
 \begin{table}[H]
 \centering
 \caption{Equilibrium temperature for different gas densities.}
-\begin{tabular}{|c|c|c|c|c|}
+\begin{tabular}{|c|c|c|c|c|c|}
 \hline
-Density \(n_H\) [cm\(^{-3}\)] & $T_\mathrm{eq}$ [K] & $\Lambda_\mathrm{FF}(T_\mathrm{eq})$ & Steps & Time [s] \\
+Density \(n_H\) [cm\(^{-3}\)] & $T_\mathrm{eq}$ [K] & Abs. error [K] & Rel. error & Steps & Time [s] \\
 \hline
 $10^{-4}$ & \input{\CalcDir/equilibrium_low_density.txt} \\
 $1$ & \input{\CalcDir/equilibrium_mid_density.txt} \\
@@ -209,7 +253,7 @@ $10^4$ & \input{\CalcDir/equilibrium_high_density.txt} \\
 \end{tabular}
 \end{table}
 
-\textbf{Discuss the results.  What is the difference for the low, intermediate and high gas density?}
+The equilibrium temperature of the low gas density is orders of magnitude higher than the equilibrium temperature of the intermediate and high gas densities. Furthermore, it took many more steps to converge to the equilibrium temperature in the more realistic model compared to the simpler one.
 
 
 \subsection{Code for Exercise 2}
